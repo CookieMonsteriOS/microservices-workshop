@@ -25,4 +25,20 @@ app.post('/order', async (req, res) => {
     res.send({ order, delivery })
 })
 
+app.get('/resteraunt/:id', async (req,res)=>{
+    
+    const restaurantId = parseInt(req.params.id); 
+
+    try {
+        const restaurant = await restaurantsRequester.send({ type: 'getById', id: restaurantId }); 
+        console.log(restaurant, restaurantId)
+        if (restaurant) {
+            res.send(restaurant); 
+            res.status(404).send({ error: 'Restaurant not found' });
+        }
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to retrieve restaurant' });
+    }
+})
+
 app.listen(3000, () => console.log('listening'))
