@@ -3,6 +3,9 @@ const bodyParser = require('body-parser')
 const cote = require('cote')
 const axios = require('axios')
 const winston = require('winston');
+const tracer = require('../tracer/tracing');
+const path = require('path');
+
 
 //TODO: Move into Config tile
 const { combine, timestamp, printf, colorize, align } = winston.format;
@@ -45,7 +48,9 @@ app.post('/order', async (req, res) => {
 app.get('/resteraunt/:id', async (req,res)=>{
     
     const restaurantId = parseInt(req.params.id); 
-
+    const tracer = opentelemetry.trace.getTracer('restaurant-service');
+    const span = tracer.startSpan('fetch-restaurant');
+    
     try {
         const restaurant = await restaurantsRequester.send({ type: 'getById', id: restaurantId }); 
         if (restaurant) {
@@ -54,7 +59,10 @@ app.get('/resteraunt/:id', async (req,res)=>{
         }
     } catch (error) {
         logger.info('Resteraunt id failed');
+        span.recordException(error);  
         res.status(500).send({ error: 'Failed to retrieve restaurant' });
+    } finally {
+        span.end();
     }
 
 })

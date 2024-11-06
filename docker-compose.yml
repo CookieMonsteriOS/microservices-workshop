@@ -23,6 +23,7 @@ services:
       - 3000:3000
     volumes:
       - ./api-gateway:/app/src
+      - ./tracer:/app/tracer 
 
   delivery-service:
     build:
