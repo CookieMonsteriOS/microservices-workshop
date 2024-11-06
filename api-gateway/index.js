@@ -2,6 +2,23 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const cote = require('cote')
 const axios = require('axios')
+const winston = require('winston');
+
+//TODO: Move into Config tile
+const { combine, timestamp, printf, colorize, align } = winston.format;
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: combine(
+    colorize({ all: true }),
+    timestamp({
+      format: 'YYYY-MM-DD hh:mm:ss.SSS A',
+    }),
+    align(),
+    printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`)
+  ),
+  transports: [new winston.transports.File({filename:'logs.txt'})],
+});
 
 const app = express()
 
@@ -31,14 +48,15 @@ app.get('/resteraunt/:id', async (req,res)=>{
 
     try {
         const restaurant = await restaurantsRequester.send({ type: 'getById', id: restaurantId }); 
-        console.log(restaurant, restaurantId)
         if (restaurant) {
             res.send(restaurant); 
             res.status(404).send({ error: 'Restaurant not found' });
         }
     } catch (error) {
+        logger.info('Resteraunt id failed');
         res.status(500).send({ error: 'Failed to retrieve restaurant' });
     }
+
 })
 
 app.listen(3000, () => console.log('listening'))

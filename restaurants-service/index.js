@@ -48,7 +48,6 @@ restaurantsResponder.on(req => req.type && console.log(req))
 restaurantsResponder.on('list', req => Promise.resolve(restaurants))
 
 restaurantsResponder.on('getById',(req)=>{
-    console.log('THIS HAS BEEN FOUND')
     const restaurant =  restaurants.find(r => r.id === req.id);
     return Promise.resolve(restaurant);
 })
