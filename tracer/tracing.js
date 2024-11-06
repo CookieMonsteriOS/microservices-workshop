@@ -3,7 +3,7 @@ const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumenta
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
 
 const traceExporter = new OTLPTraceExporter({
-  url: '', //Connect to OTLP exporter
+  url: 'http://localhost:4318/v1/traces', //Connect to OTLP exporter
 });
 
 const sdk = new NodeSDK({

@@ -5,7 +5,8 @@ const axios = require('axios')
 const winston = require('winston');
 const tracer = require('../tracer/tracing');
 const path = require('path');
-
+const redis = require('redis');
+const client = redis.createClient();
 
 //TODO: Move into Config tile
 const { combine, timestamp, printf, colorize, align } = winston.format;
@@ -34,9 +35,30 @@ const orderRequester = new cote.Requester({ name: 'order requester', key: 'order
 const deliveryRequester = new cote.Requester({ name: 'delivery requester', key: 'deliveries' })
 
 app.get('/restaurants', async (req, res) => {
-    const restaurants = await restaurantsRequester.send({ type: 'list' })
-    res.send(restaurants);
-})
+    try {
+
+        client.get('restaurants', async (err, cachedData) => {
+            if (err) {
+                console.error('Error accessing Redis:', err);
+                return res.status(500).send({ error: 'Error accessing cache' });
+            }
+            
+            if (cachedData) {
+                console.log('Serving from cache');
+                return res.send(JSON.parse(cachedData));
+            }
+
+            const restaurants = await restaurantsRequester.send({ type: 'list' });
+
+            client.setex('restaurants', 3600, JSON.stringify(restaurants));
+
+            res.send(restaurants);
+        });
+    } catch (error) {
+        console.error('Failed to retrieve restaurants:', error);
+        res.status(500).send({ error: 'Failed to retrieve restaurant list' });
+    }
+});
 
 app.post('/order', async (req, res) => {
     const order = await orderRequester.send({ type: 'create order', order: req.body })
