@@ -7,6 +7,21 @@ const tracer = require('../tracer/tracing');
 const path = require('path');
 const redis = require('redis');
 const client = redis.createClient();
+const CircuitBreaker = require('opossum');
+
+
+//Circuit breaker for /order
+const orderBreaker = new CircuitBreaker(async (orderData) => {
+    return await orderRequester.send(orderData);
+  });
+  
+  const deliveryBreaker = new CircuitBreaker(async (deliveryData) => {
+    return await deliveryRequester.send(deliveryData);
+  });
+
+// Circuit breaker fallback for /order
+orderBreaker.fallback(() => ({ error: 'Order service is currently unavailable.' }));
+deliveryBreaker.fallback(() => ({ error: 'Delivery service is currently unavailable.' }));
 
 //TODO: Move into Config tile
 const { combine, timestamp, printf, colorize, align } = winston.format;
@@ -61,11 +76,26 @@ app.get('/restaurants', async (req, res) => {
 });
 
 app.post('/order', async (req, res) => {
-    const order = await orderRequester.send({ type: 'create order', order: req.body })
-    const delivery = await deliveryRequester.send({ type: 'create delivery', order })
-
-    res.send({ order, delivery })
-})
+    try {
+      const order = await orderBreaker.fire({ type: 'create order', order: req.body });
+      
+      if (order.error) {
+        return res.status(503).send({ error: order.error });
+      }
+  
+      const delivery = await deliveryBreaker.fire({ type: 'create delivery', order });
+  
+      if (delivery.error) {
+        return res.status(503).send({ error: delivery.error });
+      }
+  
+      res.send({ order, delivery });
+  
+    } catch (error) {
+      res.status(500).send({ error: 'An unexpected error occurred.' });
+    }
+  });
+  
 
 app.get('/resteraunt/:id', async (req,res)=>{
     
