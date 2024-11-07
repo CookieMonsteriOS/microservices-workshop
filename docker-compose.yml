@@ -24,7 +24,9 @@ services:
     volumes:
       - ./api-gateway:/app/src
       - ./tracer:/app/tracer 
-
+      - ./services:/app/services 
+      - ./tracer/logs:/app/logs
+      - ./circuit-breaker:/app/circuit-breaker 
   delivery-service:
     build:
       context: .

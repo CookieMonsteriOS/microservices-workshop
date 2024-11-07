@@ -7,59 +7,29 @@ const tracer = require('../tracer/tracing');
 const path = require('path');
 const redis = require('redis');
 const client = redis.createClient();
-const CircuitBreaker = require('opossum');
+const { restaurantsRequester, orderRequester, deliveryRequester } = require('../services/requesters.js');
+const logger = require('../tracer/logger.js');
+const { createOrderBreaker, createDeliveryBreaker } = require('../circuit-breaker/circuit-breakers.js');
+const orderBreaker = createOrderBreaker(orderRequester);
+const deliveryBreaker = createDeliveryBreaker(deliveryRequester);
 
-
-//Circuit breaker for /order
-const orderBreaker = new CircuitBreaker(async (orderData) => {
-    return await orderRequester.send(orderData);
-  });
-  
-  const deliveryBreaker = new CircuitBreaker(async (deliveryData) => {
-    return await deliveryRequester.send(deliveryData);
-  });
-
-// Circuit breaker fallback for /order
+//TODO Improve readability
 orderBreaker.fallback(() => ({ error: 'Order service is currently unavailable.' }));
 deliveryBreaker.fallback(() => ({ error: 'Delivery service is currently unavailable.' }));
-
-//TODO: Move into Config tile
-const { combine, timestamp, printf, colorize, align } = winston.format;
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: combine(
-    colorize({ all: true }),
-    timestamp({
-      format: 'YYYY-MM-DD hh:mm:ss.SSS A',
-    }),
-    align(),
-    printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`)
-  ),
-  transports: [new winston.transports.File({filename:'logs.txt'})],
-});
 
 const app = express()
 
 app.use(bodyParser.json())
-
-const restaurantsRequester = new cote.Requester({ name: 'restaurants requester', key: 'restaurants' })
-
-const orderRequester = new cote.Requester({ name: 'order requester', key: 'orders' })
-
-const deliveryRequester = new cote.Requester({ name: 'delivery requester', key: 'deliveries' })
 
 app.get('/restaurants', async (req, res) => {
     try {
 
         client.get('restaurants', async (err, cachedData) => {
             if (err) {
-                console.error('Error accessing Redis:', err);
                 return res.status(500).send({ error: 'Error accessing cache' });
             }
             
             if (cachedData) {
-                console.log('Serving from cache');
                 return res.send(JSON.parse(cachedData));
             }
 
@@ -100,7 +70,7 @@ app.post('/order', async (req, res) => {
 app.get('/resteraunt/:id', async (req,res)=>{
     
     const restaurantId = parseInt(req.params.id); 
-    const tracer = opentelemetry.trace.getTracer('restaurant-service');
+    const tracer = trace.getTracer('restaurant-service');
     const span = tracer.startSpan('fetch-restaurant');
     
     try {

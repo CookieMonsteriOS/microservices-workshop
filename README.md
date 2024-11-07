@@ -2,6 +2,14 @@
 
 An example microservices implementation with Node.js and Docker
 
+## Additions
+
+- Order API added.
+- Winston and Open Telementary integration.
+- Redis. 
+- Circuit breakers.
+- Refactor.
+
 ## Requirements
 Make sure you have the latest Docker and docker-compose installed. You may also want to have PM2 installed globally via `npm i -g pm2`.
 
