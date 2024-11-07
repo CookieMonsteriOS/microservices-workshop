@@ -70,21 +70,22 @@ app.post('/order', async (req, res) => {
 app.get('/resteraunt/:id', async (req,res)=>{
     
     const restaurantId = parseInt(req.params.id); 
-    const tracer = trace.getTracer('restaurant-service');
-    const span = tracer.startSpan('fetch-restaurant');
-    
+    //const tracer = trace.getTracer('restaurant-service');
+    //const span = tracer.startSpan('fetch-restaurant');
     try {
         const restaurant = await restaurantsRequester.send({ type: 'getById', id: restaurantId }); 
         if (restaurant) {
             res.send(restaurant); 
+            
+        }else{
             res.status(404).send({ error: 'Restaurant not found' });
         }
     } catch (error) {
-        logger.info('Resteraunt id failed');
-        span.recordException(error);  
+        logger.info('Resteraunt retrievalfailed');
+        //span.recordException(error);  
         res.status(500).send({ error: 'Failed to retrieve restaurant' });
     } finally {
-        span.end();
+        //span.end();
     }
 
 })
